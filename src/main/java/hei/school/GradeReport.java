@@ -61,9 +61,10 @@ public class GradeReport {
                     line.put("status", "EN ATTENTE DE CORRECTION");
                     line.put("grade", null);
                 } else {
-                    BigDecimal raw = (BigDecimal) row.get("raw_points");
-                    BigDecimal max = (BigDecimal) row.get("max_points");
-                    BigDecimal grade = raw.multiply(new BigDecimal("20")).divide(max, 1, RoundingMode.HALF_UP);
+                    double raw = ((BigDecimal) row.get("raw_points")).doubleValue();
+                    double max = ((BigDecimal) row.get("max_points")).doubleValue();
+                    double gradeValue = Exercise.gradeOn20(raw, max, deadline, submittedAt);
+                    BigDecimal grade = BigDecimal.valueOf(gradeValue);
                     line.put("status", "CORRIGÉ");
                     line.put("grade", grade);
                     line.put("feedback", row.get("feedback"));

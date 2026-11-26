@@ -60,7 +60,8 @@ public class SubmissionController {
 
         LocalDate deadline = ((java.sql.Date) exercises.get(0).get("deadline")).toLocalDate();
         LocalDateTime now = LocalDateTime.now();
-        boolean late = now.toLocalDate().isAfter(deadline);
+        int lateDays = Exercise.lateDaysStarted(deadline, now.toLocalDate());
+        boolean late = lateDays > 0;
 
         jdbcTemplate.update(
                 "INSERT INTO submission (exercise_id, student_id, content, repo_url, submitted_at) VALUES (?, ?, ?, ?, ?)",
@@ -71,6 +72,10 @@ public class SubmissionController {
         result.put("id", submissionId);
         result.put("submittedAt", now);
         result.put("late", late);
+        if (late) {
+            result.put("lateDays", lateDays);
+            result.put("penaltyRate", Exercise.latePenaltyRate(lateDays));
+        }
         result.put("message", late ? "Soumission enregistrée, mais en retard" : "Soumission enregistrée");
         return ResponseEntity.status(201).body(result);
     }
@@ -99,7 +104,7 @@ public class SubmissionController {
             double raw = ((BigDecimal) row.get("raw_points")).doubleValue();
             double max = ((BigDecimal) row.get("max_points")).doubleValue();
             result.put("rawPoints", raw);
-            result.put("grade", Math.round(raw / max * 20 * 10) / 10.0);
+            result.put("grade", Exercise.gradeOn20(raw, max, deadline, submittedAt));
             result.put("feedback", row.get("feedback"));
         }
         return ResponseEntity.ok(result);
@@ -130,12 +135,10 @@ public class SubmissionController {
         jdbcTemplate.update("UPDATE submission SET raw_points = ?, feedback = ?, graded_at = now() WHERE id = ?",
                 points, feedback, id);
 
-        // grade out of 20
-        double grade = Math.round(points / max * 20 * 10) / 10.0;
-
         LocalDate deadline = ((java.sql.Date) row.get("deadline")).toLocalDate();
         LocalDateTime submittedAt = ((Timestamp) row.get("submitted_at")).toLocalDateTime();
-        boolean late = submittedAt.toLocalDate().isAfter(deadline);
+        double grade = Exercise.gradeOn20(points, max, deadline, submittedAt);
+        boolean late = Exercise.lateDaysStarted(deadline, submittedAt.toLocalDate()) > 0;
 
         // notify the student by email
         String fullName = (String) row.get("full_name");

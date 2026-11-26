@@ -1,6 +1,10 @@
 package hei.school;
 
 import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -32,9 +36,11 @@ public class CsvExport {
         for (Map<String, Object> row : rows) {
             String note = "";
             if (row.get("raw_points") != null) {
-                double n = ((BigDecimal) row.get("raw_points")).doubleValue()
-                        / ((BigDecimal) row.get("max_points")).doubleValue() * 20;
-                n = Math.floor(n * 10) / 10;
+                double raw = ((BigDecimal) row.get("raw_points")).doubleValue();
+                double max = ((BigDecimal) row.get("max_points")).doubleValue();
+                LocalDate deadline = ((Date) row.get("deadline")).toLocalDate();
+                LocalDateTime submittedAt = ((Timestamp) row.get("submitted_at")).toLocalDateTime();
+                double n = Exercise.gradeOn20(raw, max, deadline, submittedAt);
                 note = String.valueOf(n).replace('.', ',');
             }
             csv.append(row.get("reference")).append(';')
