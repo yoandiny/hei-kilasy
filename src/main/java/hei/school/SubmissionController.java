@@ -29,6 +29,9 @@ public class SubmissionController {
     @Autowired
     private JavaMailSender mailSender;
 
+    @Autowired
+    private SmsGradeNotifier smsGradeNotifier;
+
     @PostMapping("/exercises/{id}/submissions")
     public ResponseEntity<?> submit(@PathVariable long id, @RequestBody Map<String, Object> body) {
         if (body.get("studentId") == null) {
@@ -165,6 +168,15 @@ public class SubmissionController {
         result.put("grade", grade);
         result.put("late", late);
         result.put("feedback", feedback);
+
+        try {
+            smsGradeNotifier.sendGradeAvailable((String) row.get("phone"), title, grade);
+        } catch (Exception ex) {
+            String smsError = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
+            result.put("smsError", smsError);
+            System.err.println("Échec envoi SMS : " + smsError);
+        }
+
         return ResponseEntity.ok(result);
     }
 }
